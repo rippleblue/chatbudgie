@@ -140,19 +140,8 @@ class ChatBudgie {
             wp_send_json_error(array('message' => '消息不能为空'));
         }
 
-        // 检查并扣减 token
-        $current_tokens = get_option('chatbudgie_tokens', 1000);
-        $token_cost = 10; // 每条消息消耗 10 token
-        
-        if ($current_tokens < $token_cost) {
-            wp_send_json_error(array('message' => 'Token 不足，请充值后再使用'));
-        }
-        
-        // 扣减 token
-        update_option('chatbudgie_tokens', $current_tokens - $token_cost);
-
-        //$api_url = 'http://localhost:5000/chat';
-        $api_url = 'http://host.docker.internal:5000/chat';
+        $api_url = 'http://localhost:5000/chat';
+        //$api_url = 'http://host.docker.internal:5000/chat';
 
         $body = array(
             'message' => $message,
