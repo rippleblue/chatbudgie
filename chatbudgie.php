@@ -65,39 +65,58 @@ class ChatBudgie {
         ));
     }
 
+    private function render_icon($icon_type, $custom_icon, $context = 'toggle') {
+        $size = $context === 'header' ? 20 : 24;
+        $stroke_width = $context === 'header' ? 1.5 : 2;
+
+        if ($icon_type === 'custom' && !empty($custom_icon)) :
+            ?><img src="<?php echo esc_url($custom_icon); ?>" alt="Chat" style="width: <?php echo $size; ?>px; height: <?php echo $size; ?>px;" /><?php
+        elseif ($icon_type === 'robot') :
+            ?><svg width="<?php echo $size; ?>" height="<?php echo $size; ?>" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="<?php echo $stroke_width; ?>">
+                <rect x="3" y="11" width="18" height="10" rx="2"></rect>
+                <circle cx="12" cy="5" r="2"></circle>
+                <path d="M12 7v4"></path>
+                <line x1="8" y1="16" x2="8" y2="16"></line>
+                <line x1="16" y1="16" x2="16" y2="16"></line>
+            </svg><?php
+        elseif ($icon_type === 'headphones') :
+            ?><svg width="<?php echo $size; ?>" height="<?php echo $size; ?>" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="<?php echo $stroke_width; ?>">
+                <path d="M3 18v-6a9 9 0 0 1 18 0v6"></path>
+                <path d="M21 19a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3zM3 19a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2v-3a2 2 0 0 0-2-2H3z"></path>
+            </svg><?php
+        elseif ($icon_type === 'message') :
+            ?><svg width="<?php echo $size; ?>" height="<?php echo $size; ?>" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="<?php echo $stroke_width; ?>">
+                <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path>
+            </svg><?php
+        elseif ($icon_type === 'budgie') :
+            ?><svg width="<?php echo $size; ?>" height="<?php echo $size; ?>" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="<?php echo $stroke_width; ?>" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M16 7h.01"/>
+                <path d="M3.4 18H12a8 8 0 0 0 8-8V7a4 4 0 0 0-7.28-2.3L2 20"/>
+                <path d="m20 7 2 .5-2 .5"/>
+                <path d="M10 18v3"/>
+                <path d="M14 17.75V21"/>
+                <path d="M7 18a6 6 0 0 0 3.84-10.61"/>
+            </svg><?php
+        else :
+            ?><svg width="<?php echo $size; ?>" height="<?php echo $size; ?>" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="<?php echo $stroke_width; ?>">
+                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+            </svg><?php
+        endif;
+    }
+
     public function render_chat_widget() {
         $icon_type = get_option('chatbudgie_icon_type', 'default');
         $custom_icon = get_option('chatbudgie_custom_icon', '');
         ?>
         <div id="chatbudgie-widget" class="chatbudgie-widget">
             <div class="chatbudgie-toggle">
-                <?php if ($icon_type === 'custom' && !empty($custom_icon)) : ?>
-                    <img src="<?php echo esc_url($custom_icon); ?>" alt="Chat" style="width: 24px; height: 24px;" />
-                <?php elseif ($icon_type === 'robot') : ?>
-                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <rect x="3" y="11" width="18" height="10" rx="2"></rect>
-                        <circle cx="12" cy="5" r="2"></circle>
-                        <path d="M12 7v4"></path>
-                        <line x1="8" y1="16" x2="8" y2="16"></line>
-                        <line x1="16" y1="16" x2="16" y2="16"></line>
-                    </svg>
-                <?php elseif ($icon_type === 'headphones') : ?>
-                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M3 18v-6a9 9 0 0 1 18 0v6"></path>
-                        <path d="M21 19a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3zM3 19a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2v-3a2 2 0 0 0-2-2H3z"></path>
-                    </svg>
-                <?php elseif ($icon_type === 'message') : ?>
-                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path>
-                    </svg>
-                <?php else : ?>
-                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
-                    </svg>
-                <?php endif; ?>
+                <?php $this->render_icon($icon_type, $custom_icon, 'toggle'); ?>
             </div>
             <div class="chatbudgie-container">
                 <div class="chatbudgie-header">
+                    <div class="chatbudgie-header-icon">
+                        <?php $this->render_icon($icon_type, $custom_icon, 'header'); ?>
+                    </div>
                     <h3><?php echo esc_html__('ChatBudgie', 'chatbudgie'); ?></h3>
                     <button class="chatbudgie-close">&times;</button>
                 </div>
@@ -121,12 +140,19 @@ class ChatBudgie {
             wp_send_json_error(array('message' => '消息不能为空'));
         }
 
-        $api_url = get_option('chatbudgie_api_url', '');
-        $api_key = get_option('chatbudgie_api_key', '');
-
-        if (empty($api_url)) {
-            wp_send_json_error(array('message' => '请在设置中配置 API 地址'));
+        // 检查并扣减 token
+        $current_tokens = get_option('chatbudgie_tokens', 1000);
+        $token_cost = 10; // 每条消息消耗 10 token
+        
+        if ($current_tokens < $token_cost) {
+            wp_send_json_error(array('message' => 'Token 不足，请充值后再使用'));
         }
+        
+        // 扣减 token
+        update_option('chatbudgie_tokens', $current_tokens - $token_cost);
+
+        //$api_url = 'http://localhost:5000/chat';
+        $api_url = 'http://host.docker.internal:5000/chat';
 
         $body = array(
             'message' => $message,
@@ -136,10 +162,6 @@ class ChatBudgie {
         $headers = array(
             'Content-Type' => 'application/json'
         );
-
-        if (!empty($api_key)) {
-            $headers['Authorization'] = 'Bearer ' . $api_key;
-        }
 
         $response = wp_remote_post($api_url, array(
             'headers' => $headers,
@@ -174,33 +196,39 @@ class ChatBudgie {
     }
 
     public function register_settings() {
-        register_setting('chatbudgie_settings', 'chatbudgie_api_url');
-        register_setting('chatbudgie_settings', 'chatbudgie_api_key');
         register_setting('chatbudgie_settings', 'chatbudgie_icon_type');
         register_setting('chatbudgie_settings', 'chatbudgie_custom_icon');
+        register_setting('chatbudgie_settings', 'chatbudgie_primary_color');
+        register_setting('chatbudgie_settings', 'chatbudgie_secondary_color');
+        register_setting('chatbudgie_settings', 'chatbudgie_tokens');
     }
 
     public function render_settings_page() {
         ?>
         <div class="wrap">
             <h1><?php echo esc_html__('ChatBudgie 设置', 'chatbudgie'); ?></h1>
+            <p style="background: #f0f0f0; padding: 10px; border-left: 4px solid #667eea;">
+                <?php echo esc_html__('API 地址已固定为: http://localhost:5000/chat', 'chatbudgie'); ?>
+            </p>
+            <div style="background: #fff; border: 1px solid #e0e0e0; border-radius: 8px; padding: 20px; margin-bottom: 20px;">
+                <h2 style="margin-top: 0; margin-bottom: 15px;"><?php echo esc_html__('Token 管理', 'chatbudgie'); ?></h2>
+                <div style="display: flex; align-items: center; gap: 20px;">
+                    <div>
+                        <p style="font-size: 16px; font-weight: 600; margin: 0;">
+                            <?php echo esc_html__('剩余 Token:', 'chatbudgie'); ?> <span style="color: #667eea; font-size: 24px;"><?php echo esc_html(get_option('chatbudgie_tokens', 1000)); ?></span>
+                        </p>
+                        <p style="font-size: 12px; color: #666; margin: 5px 0 0;">
+                            <?php echo esc_html__('用于调用 API 的 token 数量', 'chatbudgie'); ?>
+                        </p>
+                    </div>
+                    <button type="button" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; border-radius: 6px; padding: 10px 20px; font-size: 14px; font-weight: 600; cursor: pointer; transition: all 0.3s ease;">
+                        <?php echo esc_html__('充值 Token', 'chatbudgie'); ?>
+                    </button>
+                </div>
+            </div>
             <form method="post" action="options.php">
                 <?php settings_fields('chatbudgie_settings'); ?>
                 <table class="form-table">
-                    <tr valign="top">
-                        <th scope="row"><?php echo esc_html__('API 地址', 'chatbudgie'); ?></th>
-                        <td>
-                            <input type="text" name="chatbudgie_api_url" value="<?php echo esc_attr(get_option('chatbudgie_api_url')); ?>" class="regular-text" placeholder="https://your-api.com/chat" />
-                            <p class="description"><?php echo esc_html__('输入定制 API 的完整地址', 'chatbudgie'); ?></p>
-                        </td>
-                    </tr>
-                    <tr valign="top">
-                        <th scope="row"><?php echo esc_html__('API 密钥', 'chatbudgie'); ?></th>
-                        <td>
-                            <input type="password" name="chatbudgie_api_key" value="<?php echo esc_attr(get_option('chatbudgie_api_key')); ?>" class="regular-text" />
-                            <p class="description"><?php echo esc_html__('可选：如果 API 需要认证，请输入 API 密钥', 'chatbudgie'); ?></p>
-                        </td>
-                    </tr>
                     <tr valign="top">
                         <th scope="row"><?php echo esc_html__('聊天气泡图标', 'chatbudgie'); ?></th>
                         <td>
@@ -247,6 +275,20 @@ class ChatBudgie {
                                 </span>
                             </label>
                             <label style="display: block; margin-bottom: 10px;">
+                                <input type="radio" name="chatbudgie_icon_type" value="budgie" <?php checked($icon_type, 'budgie'); ?> />
+                                <span style="margin-left: 8px;"><?php echo esc_html__('小鸟 (Budgie)', 'chatbudgie'); ?></span>
+                                <span style="margin-left: 10px; display: inline-block; width: 40px; height: 40px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 50%; vertical-align: middle; text-align: center; line-height: 40px;">
+                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: middle;">
+                                        <path d="M16 7h.01"/>
+                                        <path d="M3.4 18H12a8 8 0 0 0 8-8V7a4 4 0 0 0-7.28-2.3L2 20"/>
+                                        <path d="m20 7 2 .5-2 .5"/>
+                                        <path d="M10 18v3"/>
+                                        <path d="M14 17.75V21"/>
+                                        <path d="M7 18a6 6 0 0 0 3.84-10.61"/>
+                                    </svg>
+                                </span>
+                            </label>
+                            <label style="display: block; margin-bottom: 10px;">
                                 <input type="radio" name="chatbudgie_icon_type" value="custom" <?php checked($icon_type, 'custom'); ?> />
                                 <span style="margin-left: 8px;"><?php echo esc_html__('自定义图标 URL', 'chatbudgie'); ?></span>
                             </label>
@@ -266,6 +308,38 @@ class ChatBudgie {
                             customUrlDiv.style.display = this.value === 'custom' ? 'block' : 'none';
                         });
                     });
+
+                    // Token 充值功能
+                    var rechargeButton = document.querySelector('button[type="button"]');
+                    if (rechargeButton) {
+                        rechargeButton.addEventListener('click', function() {
+                            var amount = prompt('<?php echo esc_js(__('请输入要充值的 Token 数量:', 'chatbudgie')); ?>', '1000');
+                            if (amount && !isNaN(amount) && amount > 0) {
+                                var currentTokens = parseInt('<?php echo esc_js(get_option('chatbudgie_tokens', 1000)); ?>');
+                                var newTokens = currentTokens + parseInt(amount);
+                                
+                                // 创建隐藏字段来存储新的 token 数量
+                                var tokenField = document.getElementById('chatbudgie_tokens');
+                                if (!tokenField) {
+                                    tokenField = document.createElement('input');
+                                    tokenField.type = 'hidden';
+                                    tokenField.id = 'chatbudgie_tokens';
+                                    tokenField.name = 'chatbudgie_tokens';
+                                    document.querySelector('form').appendChild(tokenField);
+                                }
+                                tokenField.value = newTokens;
+                                
+                                // 显示成功消息
+                                alert('<?php echo esc_js(__('充值成功！', 'chatbudgie')); ?>\n<?php echo esc_js(__('新的 Token 数量:', 'chatbudgie')); ?> ' + newTokens);
+                                
+                                // 更新显示
+                                var tokenDisplay = document.querySelector('span[style*="color: #667eea"]');
+                                if (tokenDisplay) {
+                                    tokenDisplay.textContent = newTokens;
+                                }
+                            }
+                        });
+                    }
                 });
                 </script>
                 <?php submit_button(); ?>

@@ -13,7 +13,7 @@
 
 ## 安装方法
 
-1. 下载插件：`git clone https://github.com/yourusername/chatbudgie.git`
+1. 下载插件：`git clone https://github.com/rippleblue/chatbudgie.git`
 2. 将 `chatbudgie` 文件夹复制到 WordPress 的 `wp-content/plugins/` 目录
 3. 在 WordPress 后台 **插件** 页面启用 ChatBudgie
 4. 进入 **设置 → ChatBudgie** 配置 API 地址和其他选项
