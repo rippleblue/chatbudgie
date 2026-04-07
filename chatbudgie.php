@@ -34,6 +34,8 @@ if (file_exists(__DIR__ . '/lib/Vektor/Core/Config.php')) {
 define('CHATBUDGIE_VERSION', '1.0.0');
 define('CHATBUDGIE_PLUGIN_DIR', plugin_dir_path(__FILE__));
 define('CHATBUDGIE_PLUGIN_URL', plugin_dir_url(__FILE__));
+define('CHATBUDGIE_INDEX_META_TABLE', 'chatbudgie_index_meta');
+define('CHATBUDGIE_CHUNK_TABLE', 'chatbudgie_chunk_data');
 
 use ChatBudgie\Vektor\Core\Config;
 use ChatBudgie\Vektor\Services\Indexer;
@@ -45,6 +47,8 @@ class ChatBudgie {
     public static string $dataDir = CHATBUDGIE_PLUGIN_DIR . '/data';
     public static int $embeddingDimension = 1536;
     public static string $embeddingAPI = 'https://chat.superbudgie.com/api/rag/embedding/v1';
+    private Indexer $indexer;
+    private Searcher $searcher;
 
     /**
      * Get the singleton instance of ChatBudgie
@@ -65,29 +69,170 @@ class ChatBudgie {
     private function __construct() {
         // Initialize the vector index dimension and data directory
         Config::setDimensions(self::$embeddingDimension);
-          
+
         if (!file_exists(self::$dataDir)) {
             if (!wp_mkdir_p(self::$dataDir)) {
                 error_log('ChatBudgie: Failed to create data directory at ' . self::$dataDir);
             }
         }
         Config::setDataDir(self::$dataDir);
-        
+
+        // Initialize Indexer and Searcher
+        $this->indexer = new Indexer();
+        $this->searcher = new Searcher();
+
         add_action('wp_enqueue_scripts', array($this, 'enqueue_scripts'));
         add_action('wp_footer', array($this, 'render_chat_widget'));
         add_action('wp_ajax_chatbudgie_send_message', array($this, 'handle_send_message'));
         add_action('wp_ajax_nopriv_chatbudgie_send_message', array($this, 'handle_send_message'));
         add_action('admin_menu', array($this, 'add_admin_menu'));
         add_action('admin_init', array($this, 'register_settings'));
-        
+
         // Add cron job hook
         add_action('chatbudgie_daily_task', array($this, 'daily_task'));
-        
+
         // Set up cron job on plugin activation
         register_activation_hook(__FILE__, array($this, 'activate'));
-        
+
         // Clean up cron job on plugin deactivation
         register_deactivation_hook(__FILE__, array($this, 'deactivate'));
+    }
+
+    /**
+     * Create the index meta table for tracking post index times
+     * Creates a custom WordPress table to store when each post was last indexed
+     *
+     * @return void
+     */
+    private function create_index_meta_table() {
+        global $wpdb;
+
+        $table_name = $wpdb->prefix . CHATBUDGIE_INDEX_META_TABLE;
+        $charset_collate = $wpdb->get_charset_collate();
+
+        $sql = "CREATE TABLE IF NOT EXISTS {$table_name} (
+            id bigint(20) NOT NULL AUTO_INCREMENT,
+            post_id bigint(20) NOT NULL,
+            last_indexed datetime DEFAULT NULL,
+            created_at datetime DEFAULT CURRENT_TIMESTAMP,
+            updated_at datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            PRIMARY KEY  (id),
+            UNIQUE KEY post_id (post_id),
+            KEY last_indexed (last_indexed)
+        ) {$charset_collate};";
+
+        require_once(ABSPATH . 'wp-admin/includes/upgrade.php');
+        dbDelta($sql);
+
+        if ($wpdb->last_error) {
+            error_log('ChatBudgie: Failed to create index meta table: ' . $wpdb->last_error);
+        } else {
+            error_log('ChatBudgie: Index meta table created successfully');
+        }
+    }
+
+    /**
+     * Create the chunk data table for storing chunk text for each post
+     *
+     * @return void
+     */
+    private function create_chunk_data_table() {
+        global $wpdb;
+
+        $table_name = $wpdb->prefix . CHATBUDGIE_CHUNK_TABLE;
+        $charset_collate = $wpdb->get_charset_collate();
+
+        $sql = "CREATE TABLE IF NOT EXISTS {$table_name} (
+            id bigint(20) NOT NULL AUTO_INCREMENT,
+            post_id bigint(20) NOT NULL,
+            chunk_id int(11) NOT NULL,
+            chunk_text longtext NOT NULL,
+            created_at datetime DEFAULT CURRENT_TIMESTAMP,
+            updated_at datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            PRIMARY KEY  (id),
+            UNIQUE KEY post_chunk (post_id, chunk_id),
+            KEY post_id (post_id)
+        ) {$charset_collate};";
+
+        require_once(ABSPATH . 'wp-admin/includes/upgrade.php');
+        dbDelta($sql);
+
+        if ($wpdb->last_error) {
+            error_log('ChatBudgie: Failed to create chunk data table: ' . $wpdb->last_error);
+        } else {
+            error_log('ChatBudgie: Chunk data table created successfully');
+        }
+    }
+
+    /**
+     * Update the index time for a specific post
+     * Records when a post was last indexed in the meta table
+     *
+     * @param int $post_id The WordPress post ID
+     * @return bool True on success, false on failure
+     */
+    public function update_post_index_time($post_id) {
+        global $wpdb;
+
+        $table_name = $wpdb->prefix . CHATBUDGIE_INDEX_META_TABLE;
+        $current_time = current_time('mysql');
+
+        $result = $wpdb->replace(
+            $table_name,
+            array(
+                'post_id' => $post_id,
+                'last_indexed' => $current_time
+            ),
+            array('%d', '%s')
+        );
+
+        if ($result === false) {
+            error_log('ChatBudgie: Failed to update index time for post ' . $post_id);
+            return false;
+        }
+
+        return true;
+    }
+
+    /**
+     * Get the last index time for a specific post
+     *
+     * @param int $post_id The WordPress post ID
+     * @return string|null The last indexed datetime or null if not found
+     */
+    public function get_post_index_time($post_id) {
+        global $wpdb;
+
+        $table_name = $wpdb->prefix . CHATBUDGIE_INDEX_META_TABLE;
+
+        $result = $wpdb->get_var(
+            $wpdb->prepare(
+                "SELECT last_indexed FROM {$table_name} WHERE post_id = %d",
+                $post_id
+            )
+        );
+
+        return $result;
+    }
+
+    /**
+     * Delete index time record for a specific post
+     *
+     * @param int $post_id The WordPress post ID
+     * @return bool True on success, false on failure
+     */
+    public function delete_post_index_time($post_id) {
+        global $wpdb;
+
+        $table_name = $wpdb->prefix . CHATBUDGIE_INDEX_META_TABLE;
+
+        $result = $wpdb->delete(
+            $table_name,
+            array('post_id' => $post_id),
+            array('%d')
+        );
+
+        return $result !== false;
     }
 
     /**
@@ -95,33 +240,141 @@ class ChatBudgie {
      * Sets up scheduled tasks and builds the initial WordPress content index
      */
     public function activate() {
+        // Create index meta table
+        $this->create_index_meta_table();
+
+        // Create chunk data table
+        $this->create_chunk_data_table();
+
         // Clear existing cron jobs
         wp_clear_scheduled_hook('chatbudgie_daily_task');
-        
+
         // Schedule daily task at 3:00 AM local time
         wp_schedule_event(strtotime('03:00:00'), 'daily', 'chatbudgie_daily_task');
-        
+
         // Build full WordPress index
         $this->build_wordpress_index();
     }
 
     /**
+     * Delete all chunks and their text for a specific post
+     *
+     * @param int $post_id The WordPress post ID
+     * @return void
+     */
+    private function delete_post_chunks($post_id) {
+        // Delete old chunks from chunk data table
+        global $wpdb;
+        $chunk_table = $wpdb->prefix . CHATBUDGIE_CHUNK_TABLE;
+        $wpdb->delete($chunk_table, array('post_id' => $post_id), array('%d'));
+    }
+
+    /**
+     * Save chunk text to the database for a specific post
+     *
+     * @param int $post_id The WordPress post ID
+     * @param array $chunks Array of chunks with 'chunkText' key
+     * @return void
+     */
+    private function update_post_chunks($post_id, $chunks) {
+        $this->delete_post_chunks($post_id);
+
+        global $wpdb;
+        $chunk_table = $wpdb->prefix . CHATBUDGIE_CHUNK_TABLE;
+
+        foreach ($chunks as $chunk_index => $chunk) {
+            $wpdb->insert(
+                $chunk_table,
+                array(
+                    'post_id' => $post_id,
+                    'chunk_id' => $chunk_index,
+                    'chunk_text' => $chunk['chunkText'] ?? ''
+                ),
+                array('%d', '%d', '%s')
+            );
+        }
+    }
+
+    /**
+     * Index a single post if its content has been updated since the last index
+     *
+     * @param int $post_id The WordPress post ID
+     * @return bool True if indexed, false if skipped or failed
+     */
+    public function index_post($post_id) {
+        // Get post data
+        $post = get_post($post_id);
+        if (!$post) {
+            error_log('ChatBudgie: Post not found: ' . $post_id);
+            return false;
+        }
+
+        // Skip if post is not published
+        if ($post->post_status !== 'publish' || !in_array($post->post_type, array('post', 'page'))) {
+            return false;
+        }
+
+        // Get post modified time
+        $post_modified = $post->post_modified_gmt;
+
+        // Get last index time
+        $last_indexed = $this->get_post_index_time($post_id);
+
+        // Skip if post hasn't been modified since last index
+        if ($last_indexed && strtotime($post_modified) <= strtotime($last_indexed)) {
+            error_log('ChatBudgie: Skipping post ' . $post_id . ' - not modified since last index');
+            return false;
+        }
+
+        try {
+            $title = $post->post_title;
+            $content = $post->post_content;
+            $excerpt = $post->post_excerpt;
+
+            // Get embedding chunks from API
+            $chunks = $this->get_embedding($title, $content, $excerpt);
+
+            // Index each chunk
+            foreach ($chunks as $chunk_index => $chunk) {
+                $vector_id = $post_id . '_' . $chunk_index;
+
+                // Check if vector_id exists in index, delete first if it does
+                if ($this->indexer->delete($vector_id)) {
+                    error_log('Deleted existing vector: ' . $vector_id . ' before re-indexing');
+                }
+
+                $this->indexer->insert($vector_id, $chunk['embedding']);
+                error_log('Indexed chunk: ' . $vector_id . ' (' . strlen($chunk['chunkText']) . ' chars)');
+            }
+
+            // Save chunk text to database
+            $this->update_post_chunks($post_id, $chunks);
+
+            // Update index time for this post
+            $this->update_post_index_time($post_id);
+            error_log('ChatBudgie: Indexed post ' . $post_id . ' - ' . $title . ' (' . count($chunks) . ' chunks)');
+
+            return true;
+        } catch (Exception $e) {
+            error_log('ChatBudgie: Failed to index post ' . $post_id . ': ' . $e->getMessage());
+            return false;
+        }
+    }
+
+    /**
      * Build a full WordPress index by embedding all published posts and pages
      * Queries WordPress content in batches, generates embeddings via API, and stores them in the vector index
-     * 
+     *
      * @return void
      */
     private function build_wordpress_index() {
         try {
             error_log('ChatBudgie starting to build full WordPress index');
-            
-            // Initialize Indexer
-            $indexer = new Indexer();
-            
+
             // Get all published posts page by page
             $paged = 1;
             $posts_per_page = 10;
-            
+
             do {
                 $args = array(
                     'post_type' => array('post', 'page'),
@@ -131,46 +384,24 @@ class ChatBudgie {
                     'orderby' => 'ID',
                     'order' => 'ASC'
                 );
-                
+
                 $query = new WP_Query($args);
-                
+
                 if ($query->have_posts()) {
                     while ($query->have_posts()) {
                         $query->the_post();
-
-                        // Get post content
                         $post_id = get_the_ID();
-                        $title = get_the_title();
-                        $content = get_the_content();
-                        $excerpt = get_the_excerpt();
-                        $permalink = get_permalink();
-
-                        // Get embedding chunks from API
-                        $chunks = $this->get_embedding($title, $content, $excerpt);
-
-                        // Index each chunk
-                        foreach ($chunks as $chunk_index => $chunk) {
-                            $chunk_id = $post_id . '_' . $chunk_index;
-                            
-                            // Check if chunk already exists, delete first if it does
-                            if ($indexer->delete($chunk_id)) {
-                                error_log('ChatBudgie: Deleted existing chunk: ' . $chunk_id . ' before re-indexing');
-                            }
-                            
-                            $indexer->insert($chunk_id, $chunk['embedding']);
-                            error_log('Indexed chunk: ' . $chunk_id . ' (' . strlen($chunk['chunkText']) . ' chars)');
-                        }
-
-                        error_log('Indexed post: ' . $title . ' (ID: ' . $post_id . ', Chunks: ' . count($chunks) . ')');
+                        $this->index_post($post_id);
                     }
                     wp_reset_postdata();
                 }
-                
+
                 $paged++;
-                
+
             } while ($query->have_posts());
-            
-            error_log('ChatBudgie finished building full WordPress index');
+
+            $stats = $this->indexer->getStats();
+            error_log('ChatBudgie finished building full WordPress index: ' . $stats);
         } catch (Exception $e) {
             error_log('ChatBudgie error building full WordPress index: ' . $e->getMessage());
         }
@@ -260,38 +491,38 @@ class ChatBudgie {
         try {
             // Embed the query text
             $embedding_data = $this->get_embedding('', $query_text, '');
-            
+
             // Get the first chunk's embedding as the query vector
             if (empty($embedding_data) || !isset($embedding_data[0]['embedding'])) {
                 throw new Exception('Failed to generate query embedding');
             }
-            
+
             $query_vector = $embedding_data[0]['embedding'];
-            
-            // Initialize Searcher
-            $searcher = new Searcher();
-            
+
             // Search for top K results (oversample to handle threshold filtering)
-            $results = $searcher->search($query_vector, $k * 2, false);
-            
+            $results = $this->searcher->search($query_vector, $k, false);
+
             // Filter by threshold and limit to K
             $filtered_results = array();
             foreach ($results as $result) {
                 if ($result['score'] >= $threshold) {
+                    // Get chunk text from database
+                    $chunk_text = $this->get_chunk_text($result['id']);
+
                     $filtered_results[] = array(
                         'id' => $result['id'],
                         'score' => $result['score'],
-                        'chunkText' => $result['chunkText'] ?? ''
+                        'chunkText' => $chunk_text
                     );
-                    
+
                     if (count($filtered_results) >= $k) {
                         break;
                     }
                 }
             }
-            
+
             return $filtered_results;
-            
+
         } catch (Exception $e) {
             error_log('ChatBudgie search_index error: ' . $e->getMessage());
             throw $e;
@@ -299,19 +530,94 @@ class ChatBudgie {
     }
 
     /**
+     * Get chunk text by vector ID from the database
+     *
+     * @param string $vector_id The vector ID (e.g., '123_0')
+     * @return string The chunk text or empty string if not found
+     */
+    private function get_chunk_text($vector_id) {
+        global $wpdb;
+
+        $chunk_table = $wpdb->prefix . CHATBUDGIE_CHUNK_TABLE;
+
+        // Parse vector_id to get post_id and chunk_id
+        $parts = explode('_', $vector_id);
+        if (count($parts) < 2) {
+            return '';
+        }
+
+        $post_id = (int) $parts[0];
+        $chunk_id = (int) $parts[1];
+
+        $result = $wpdb->get_var(
+            $wpdb->prepare(
+                "SELECT chunk_text FROM {$chunk_table} WHERE post_id = %d AND chunk_id = %d",
+                $post_id,
+                $chunk_id
+            )
+        );
+
+        return $result ?: '';
+    }
+
+    /**
      * Plugin deactivation handler
      * Cleans up scheduled cron jobs and deletes vector index data
-     * 
+     *
      * @return void
      */
     public function deactivate() {
         // Clean up cron jobs
         wp_clear_scheduled_hook('chatbudgie_daily_task');
-        
+
         // Delete vector index data
         $this->delete_index_data();
-        
+
+        // Drop index meta table
+        $this->drop_index_meta_table();
+
+        // Drop chunk data table
+        $this->drop_chunk_data_table();
+
         error_log('ChatBudgie plugin deactivated, cron jobs cleaned up, index data deleted');
+    }
+
+    /**
+     * Drop the index meta table on plugin deactivation
+     *
+     * @return void
+     */
+    private function drop_index_meta_table() {
+        global $wpdb;
+
+        $table_name = $wpdb->prefix . CHATBUDGIE_INDEX_META_TABLE;
+
+        $wpdb->query("DROP TABLE IF EXISTS {$table_name}");
+
+        if ($wpdb->last_error) {
+            error_log('ChatBudgie: Failed to drop index meta table: ' . $wpdb->last_error);
+        } else {
+            error_log('ChatBudgie: Index meta table dropped successfully');
+        }
+    }
+
+    /**
+     * Drop the chunk data table on plugin deactivation
+     *
+     * @return void
+     */
+    private function drop_chunk_data_table() {
+        global $wpdb;
+
+        $table_name = $wpdb->prefix . CHATBUDGIE_CHUNK_TABLE;
+
+        $wpdb->query("DROP TABLE IF EXISTS {$table_name}");
+
+        if ($wpdb->last_error) {
+            error_log('ChatBudgie: Failed to drop chunk data table: ' . $wpdb->last_error);
+        } else {
+            error_log('ChatBudgie: Chunk data table dropped successfully');
+        }
     }
 
     /**
@@ -515,21 +821,27 @@ class ChatBudgie {
 
             if (empty($search_results)) {
                 wp_send_json_success(array(
-                    'reply' => __('I could not find any relevant information to answer your question.', 'chatbudgie'),
+                    'reply' => '<p>' . __('I could not find any relevant information to answer your question.', 'chatbudgie') . '</p>',
                     'results' => array()
                 ));
                 return;
             }
 
-            // Build reply from search results - include chunk_id, score, and content
-            $reply = '';
+            // Build reply from search results in HTML format
+            $reply = '<div class="chatbudgie-results">';
             foreach ($search_results as $index => $result) {
                 if ($index > 0) {
-                    $reply .= "\n\n---\n\n";
+                    $reply .= '<hr class="chatbudgie-result-divider">';
                 }
-                $reply .= '[Chunk ID: ' . esc_html($result['id']) . ' | Score: ' . number_format($result['score'], 3) . ']' . "\n";
-                $reply .= $result['chunk_text'];
+                $reply .= '<div class="chatbudgie-result-item">';
+                $reply .= '<div class="chatbudgie-result-meta">';
+                $reply .= '<span class="chatbudgie-result-id">' . esc_html($result['id']) . '</span>';
+                $reply .= '<span class="chatbudgie-result-score">Score: ' . number_format($result['score'], 3) . '</span>';
+                $reply .= '</div>';
+                $reply .= '<div class="chatbudgie-result-content">' . wp_kses_post($result['chunkText']) . '</div>';
+                $reply .= '</div>';
             }
+            $reply .= '</div>';
 
             wp_send_json_success(array(
                 'reply' => $reply,
