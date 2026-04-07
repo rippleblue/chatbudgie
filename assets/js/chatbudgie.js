@@ -38,8 +38,8 @@
 
     function addInitialMessage() {
         var initialHtml = '<div class="chatbudgie-initial-message">' +
-            '<h4>你好！我是 ChatBudgie</h4>' +
-            '<p>有什么我可以帮助你的吗？</p>' +
+            '<h4>Hello! I\'m ChatBudgie</h4>' +
+            '<p>How can I help you today?</p>' +
             '</div>';
         $messages.html(initialHtml);
     }

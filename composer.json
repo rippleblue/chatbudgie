@@ -1,0 +1,9 @@
+{
+    "require-dev": {
+        "php-stubs/wordpress-stubs": "^6.9",
+        "phpunit/phpunit": "^10.0"
+    },
+    "scripts": {
+        "test": "phpunit"
+    }
+}
