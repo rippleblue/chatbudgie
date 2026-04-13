@@ -102,9 +102,8 @@ class ChatBudgie {
         add_action('chatbudgie_build_index', array($this, 'execute_build_index'));
         add_action('chatbudgie_index_single_post', array($this, 'execute_index_single_post'), 10, 1);
 
-        // Hook into post save/update to schedule indexing
+        // Hook into post save to schedule/remove indexing
         add_action('save_post', array($this, 'handle_post_save'), 10, 3);
-        add_action('transition_post_status', array($this, 'handle_post_status_transition'), 10, 3);
 
         // Hook into post deletion and status changes to remove indexes
         add_action('before_delete_post', array($this, 'handle_post_delete'));
@@ -362,7 +361,7 @@ class ChatBudgie {
         } elseif ($scheduled_count > 0 && $completed_count >= $scheduled_count) {
             $status = 'completed';
         } else {
-            $status = 'idle';
+            $status = 'completed';
         }
 
         // Calculate progress (based on completed vs total)
@@ -422,7 +421,7 @@ class ChatBudgie {
     }
 
     /**
-     * Handle post save event to schedule indexing
+     * Handle post save event to schedule or remove indexing
      *
      * @param int $post_id The post ID
      * @param WP_Post $post The post object
@@ -445,48 +444,18 @@ class ChatBudgie {
             return;
         }
 
-        // Schedule indexing for published posts
+        // Post is published - schedule indexing
         if ($post->post_status === 'publish') {
             $this->schedule_post_index($post_id);
-        }
-    }
 
-    /**
-     * Handle post status transition to schedule or remove indexing
-     *
-     * @param string $new_status New post status
-     * @param string $old_status Old post status
-     * @param WP_Post $post The post object
-     * @return void
-     */
-    public function handle_post_status_transition($new_status, $old_status, $post) {
-        // Skip autosaves
-        if (defined('DOING_AUTOSAVE') && DOING_AUTOSAVE) {
-            return;
-        }
+            error_log('ChatBudgie: Post saved, scheduling index ' . $post_id);
+        } else {
+            // Post is not published - remove index if exists
+            $this->delete_post_vectors($post_id);
+            $this->delete_post_chunks($post_id);
+            $this->delete_post_index_time($post_id);
 
-        // Only index posts and pages
-        if (!in_array($post->post_type, array('post', 'page'))) {
-            return;
-        }
-
-        // Post became published - schedule indexing
-        if ($new_status === 'publish' && $old_status !== 'publish') {
-            $this->schedule_post_index($post->ID);
-        }
-
-        // Post changed from published to non-published - remove index
-        if ($old_status === 'publish' && $new_status !== 'publish') {
-            // Delete vectors for this post
-            $this->delete_post_vectors($post->ID);
-
-            // Delete chunk data
-            $this->delete_post_chunks($post->ID);
-
-            // Delete index time record
-            $this->delete_post_index_time($post->ID);
-
-            error_log('ChatBudgie: Deleted index for unpublished post ' . $post->ID . ' (status changed to: ' . $new_status . ')');
+            error_log('ChatBudgie: Deleted index for unpublished post ' . $post_id . ' (status: ' . $post->post_status . ')');
         }
     }
 
@@ -682,6 +651,31 @@ class ChatBudgie {
     }
 
     /**
+     * Delete all index data for all posts
+     * Deletes vector data, truncates the index meta table and chunk data table
+     *
+     * @return void
+     */
+    private function delete_all_index_data() {
+        global $wpdb;
+
+        error_log('ChatBudgie: Deleting all index data');
+
+        // Delete vector index data (files)
+        $this->delete_index_data();
+
+        // Truncate index meta table
+        $index_meta_table = $wpdb->prefix . CHATBUDGIE_INDEX_META_TABLE;
+        $wpdb->query("TRUNCATE TABLE {$index_meta_table}");
+
+        // Truncate chunk data table
+        $chunk_table = $wpdb->prefix . CHATBUDGIE_CHUNK_TABLE;
+        $wpdb->query("TRUNCATE TABLE {$chunk_table}");
+
+        error_log('ChatBudgie: All index data deleted');
+    }
+
+    /**
      * Save chunk text to the database for a specific post
      *
      * @param int $post_id The WordPress post ID
@@ -871,13 +865,11 @@ class ChatBudgie {
         // Clean up cron jobs
         wp_clear_scheduled_hook('chatbudgie_daily_task');
 
-        // Delete vector index data
-        $this->delete_index_data();
+        // Delete all index data (vectors + truncate tables)
+        $this->delete_all_index_data();
 
-        // Drop index meta table
+        // Drop tables
         $this->drop_index_meta_table();
-
-        // Drop chunk data table
         $this->drop_chunk_data_table();
 
         error_log('ChatBudgie plugin deactivated, cron jobs cleaned up, index data deleted');
@@ -1315,6 +1307,10 @@ class ChatBudgie {
             wp_die('Unauthorized');
         }
 
+        // Clear all existing index data
+        $this->delete_all_index_data();
+
+        // Schedule fresh index build
         $this->schedule_index_build();
 
         wp_redirect(wp_get_referer() ? wp_get_referer() : admin_url('options-general.php?page=chatbudgie'));
