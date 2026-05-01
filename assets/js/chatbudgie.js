@@ -2,153 +2,354 @@
     'use strict';
 
     var conversationHistory = [];
-    var $widget, $container, $toggle, $messages, $input, $sendBtn;
+    var isSending = false;
+    var lastFailedMessage = '';
+    var botAvatarHtml = '';
+    var errorBannerTemplate = '';
+
+    var $widget;
+    var $toggle;
+    var $closeBtn;
+    var $messages;
+    var $form;
+    var $input;
+    var $sendBtn;
 
     $(document).ready(function() {
-        $widget = $('#chatbudgie-widget');
-        $container = $widget.find('.chatbudgie-container');
+        $widget = $('.chat-widget').first();
+
+        if (!$widget.length) {
+            return;
+        }
+
         $toggle = $widget.find('.chatbudgie-toggle');
-        $messages = $widget.find('.chatbudgie-messages');
-        $input = $widget.find('.chatbudgie-input');
-        $sendBtn = $widget.find('.chatbudgie-send');
+        $closeBtn = $widget.find('.chat-header__close');
+        $messages = $widget.find('.chat-messages');
+        $form = $widget.find('#chatForm');
+        $input = $widget.find('#chatInputField');
+        $sendBtn = $widget.find('.chat-input__send');
 
-        $toggle.on('click', toggleChat);
-        $widget.find('.chatbudgie-close').on('click', closeChat);
-        $sendBtn.on('click', sendMessage);
-        $input.on('keypress', function(e) {
-            if (e.which === 13 && !e.shiftKey) {
-                e.preventDefault();
-                sendMessage();
-            }
-        });
+        botAvatarHtml = getBotAvatarHtml();
+        errorBannerTemplate = getErrorBannerTemplate();
 
-        addInitialMessage();
+        initializeWidget();
+        bindEvents();
     });
 
-    function toggleChat() {
-        $container.toggleClass('active');
-        if ($container.hasClass('active')) {
-            $input.focus();
-        }
+    function initializeWidget() {
+        $widget.removeClass('is-open');
+
+        $input.attr('placeholder', chatbudgie_params.strings.placeholder);
+        clearMessages();
+        hideErrorBanner();
+        addBotMessage('How can I help you today?');
+    }
+
+    function bindEvents() {
+        $toggle.on('click', openChat);
+        $closeBtn.on('click', closeChat);
+
+        $(document).on('mousedown', handleDocumentPointerDown);
+
+        $form.on('submit', function(event) {
+            event.preventDefault();
+            sendMessage();
+        });
+
+        $messages.on('click', '.retry-btn', function() {
+            if (!lastFailedMessage || isSending) {
+                return;
+            }
+
+            hideErrorBanner();
+            sendMessage(lastFailedMessage, {
+                skipUserBubble: true,
+                skipInputReset: true
+            });
+        });
+    }
+
+    function openChat() {
+        $widget.addClass('is-open');
+        window.setTimeout(function() {
+            $input.trigger('focus');
+            scrollToBottom();
+        }, 120);
     }
 
     function closeChat() {
-        $container.removeClass('active');
+        $widget.removeClass('is-open');
     }
 
-    function addInitialMessage() {
-        var initialHtml = '<div class="chatbudgie-initial-message">' +
-            '<h4>Hello! I\'m ChatBudgie</h4>' +
-            '<p>How can I help you today?</p>' +
-            '</div>';
-        $messages.html(initialHtml);
+    function handleDocumentPointerDown(event) {
+        if (!$widget.hasClass('is-open')) {
+            return;
+        }
+
+        if ($(event.target).closest('.chat-widget').length) {
+            return;
+        }
+
+        closeChat();
     }
 
-    function sendMessage() {
-        var message = $.trim($input.val());
-        if (!message) return;
+    function sendMessage(messageOverride, options) {
+        var opts = $.extend({
+            skipUserBubble: false,
+            skipInputReset: false
+        }, options);
+        var message = $.trim(typeof messageOverride === 'string' ? messageOverride : $input.val());
 
-        addMessage(message, 'user');
-        $input.val('');
-        $sendBtn.prop('disabled', true).text(chatbudgie_params.strings.sending);
+        if (!message || isSending) {
+            return;
+        }
 
+        hideErrorBanner();
+
+        if (!opts.skipUserBubble) {
+            addUserMessage(message);
+        }
+
+        if (!opts.skipInputReset) {
+            $input.val('');
+        }
+
+        lastFailedMessage = message;
         conversationHistory.push({ role: 'user', content: message });
+        setSendingState(true);
 
-        var $loadingMsg = addMessage('', 'loading');
+        var $loadingMessage = addLoadingMessage();
+        var xhr = new XMLHttpRequest();
+        var processedLength = 0;
+        var accumulatedReply = '';
+        var streamError = '';
 
+        xhr.open('POST', chatbudgie_params.sse_url, true);
+
+        xhr.onreadystatechange = function() {
+            if (xhr.readyState !== XMLHttpRequest.LOADING && xhr.readyState !== XMLHttpRequest.DONE) {
+                return;
+            }
+
+            var chunk = xhr.responseText.substring(processedLength);
+            processedLength = xhr.responseText.length;
+
+            if (chunk) {
+                var streamResult = consumeSSEChunk(chunk);
+
+                if (streamResult.error) {
+                    streamError = streamResult.error;
+                }
+
+                if (streamResult.content) {
+                    accumulatedReply += streamResult.content;
+                    updateAssistantMessage($loadingMessage, accumulatedReply);
+                }
+            }
+
+            if (xhr.readyState === XMLHttpRequest.DONE) {
+                finalizeRequest(xhr, $loadingMessage, accumulatedReply, streamError, message);
+            }
+        };
+
+        xhr.onerror = function() {
+            handleRequestFailure($loadingMessage, chatbudgie_params.strings.error);
+        };
+
+        xhr.send(buildFormData(message));
+    }
+
+    function finalizeRequest(xhr, $loadingMessage, accumulatedReply, streamError) {
+        if (xhr.status === 200 && !streamError && accumulatedReply) {
+            conversationHistory.push({ role: 'assistant', content: accumulatedReply });
+            lastFailedMessage = '';
+            setSendingState(false);
+            scrollToBottom();
+            return;
+        }
+
+        var message = streamError || chatbudgie_params.strings.error;
+        handleRequestFailure($loadingMessage, message);
+    }
+
+    function handleRequestFailure($loadingMessage, message) {
+        if (conversationHistory.length && conversationHistory[conversationHistory.length - 1].role === 'user') {
+            conversationHistory.pop();
+        }
+
+        if ($loadingMessage && $loadingMessage.length) {
+            $loadingMessage.remove();
+        }
+
+        showErrorBanner(message);
+        setSendingState(false);
+    }
+
+    function setSendingState(state) {
+        isSending = state;
+        $sendBtn.prop('disabled', state);
+        $input.prop('disabled', state);
+    }
+
+    function buildFormData(message) {
         var formData = new FormData();
         formData.append('action', 'chatbudgie_send_message_sse');
         formData.append('nonce', chatbudgie_params.nonce);
         formData.append('message', message);
         formData.append('conversation_history', JSON.stringify(conversationHistory));
 
-        var xhr = new XMLHttpRequest();
-        xhr.open('POST', chatbudgie_params.sse_url, true);
+        return formData;
+    }
 
-        var buffer = '';
+    function consumeSSEChunk(chunk) {
+        var result = {
+            content: '',
+            error: ''
+        };
+        var lines = chunk.split(/\r?\n/);
 
-        xhr.onreadystatechange = function() {
-            if (xhr.readyState === XMLHttpRequest.LOADING || xhr.readyState === XMLHttpRequest.DONE) {
-                if (xhr.readyState === XMLHttpRequest.LOADING) {
-                    // Process incoming SSE data
-                    //console.log('SSE response text: ' + this.responseText);
-                    parseSSEResponse(this.responseText);
-                    $loadingMsg.remove();
-                } else if (xhr.readyState === XMLHttpRequest.DONE) {
-                    //console.log("state is done: " + this.responseText)
-                    if (xhr.status === 200) {
-                        // Stream complete, add to conversation history
-                        var accumulatedReply = parseSSEResponse(this.responseText);
-                        conversationHistory.push({ role: 'assistant', content: accumulatedReply });
-                        $sendBtn.prop('disabled', false).text('Send');
-                        scrollToBottom();
-                    } else {
-                        $loadingMsg.remove();
-                        conversationHistory.pop();
-                        addMessage(chatbudgie_params.strings.error, 'error');
-                        $sendBtn.prop('disabled', false).text('Send');
-                    }
-                }
+        for (var i = 0; i < lines.length; i++) {
+            var line = $.trim(lines[i]);
+
+            if (!line || line.indexOf('data:') !== 0) {
+                continue;
             }
-        };
 
-        xhr.onerror = function() {
-            $loadingMsg.remove();
-            conversationHistory.pop();
-            addMessage(chatbudgie_params.strings.error, 'error');
-            $sendBtn.prop('disabled', false).text('Send');
-        };
+            var payload = $.trim(line.substring(5));
 
-        xhr.send(formData);
+            if (!payload) {
+                continue;
+            }
+
+            if (payload === '[DONE]') {
+                continue;
+            }
+
+            try {
+                var parsed = JSON.parse(payload);
+
+                if (parsed && typeof parsed.error === 'string') {
+                    result.error = parsed.error;
+                    continue;
+                }
+
+                if (parsed && typeof parsed.content === 'string') {
+                    result.content += parsed.content;
+                    continue;
+                }
+
+                if (parsed && typeof parsed.delta === 'string') {
+                    result.content += parsed.delta;
+                    continue;
+                }
+
+                if (parsed && parsed.choices && parsed.choices[0] && parsed.choices[0].delta && typeof parsed.choices[0].delta.content === 'string') {
+                    result.content += parsed.choices[0].delta.content;
+                    continue;
+                }
+            } catch (error) {
+                result.content += payload;
+            }
+        }
+
+        return result;
     }
 
-    function updateOrAddMessage(content, type) {
-        var $lastMsg = $messages.find('.chatbudgie-message').last();
+    function clearMessages() {
+        $messages.empty();
+    }
 
-        if ($lastMsg.hasClass(type)) {
-            $lastMsg.text(content);
-        } else {
-            addMessage(content, type);
+    function addUserMessage(content) {
+        var $message = $('<div class="msg msg--user"></div>');
+        var $bubble = $('<div class="bubble bubble--user"></div>').text(content);
+
+        $message.append($bubble);
+        $messages.append($message);
+        scrollToBottom();
+
+        return $message;
+    }
+
+    function addBotMessage(content) {
+        var $message = $('<div class="msg msg--bot"></div>');
+        var $avatar = $(botAvatarHtml);
+        var $bubble = $('<div class="bubble bubble--bot"></div>').text(content);
+
+        $message.append($avatar, $bubble);
+        $messages.append($message);
+        scrollToBottom();
+
+        return $message;
+    }
+
+    function addLoadingMessage() {
+        var $message = $('<div class="msg msg--bot"></div>');
+        var $avatar = $(botAvatarHtml);
+        var $bubble = $('<div class="bubble bubble--bot bubble--loading"></div>');
+        var $indicator = $('<div class="typing-indicator"><span></span><span></span><span></span></div>');
+
+        $bubble.append($indicator);
+        $message.append($avatar, $bubble);
+        $messages.append($message);
+        scrollToBottom();
+
+        return $message;
+    }
+
+    function updateAssistantMessage($message, content) {
+        if (!$message || !$message.length) {
+            return;
         }
+
+        var $bubble = $message.find('.bubble');
+        $bubble.removeClass('bubble--loading').text(content);
         scrollToBottom();
     }
 
-    function addMessage(content, type) {
-        var $msg = $('<div class="chatbudgie-message ' + type + '"></div>');
+    function getBotAvatarHtml() {
+        var $avatar = $widget.find('.bot-avatar').first().clone();
 
-        if (type === 'loading') {
-            $msg.html('<div class="typing-indicator"><span></span><span></span><span></span></div>');
-        } else {
-            $msg.text(content);
+        if (!$avatar.length) {
+            return '<div class="bot-avatar" aria-hidden="true"></div>';
         }
 
-        var $initial = $messages.find('.chatbudgie-initial-message');
-        if ($initial.length) {
-            $initial.remove();
+        return $('<div>').append($avatar).html();
+    }
+
+    function getErrorBannerTemplate() {
+        var $banner = $widget.find('.error-banner').first().clone();
+
+        if (!$banner.length) {
+            return '';
         }
 
-        $messages.append($msg);
+        $banner.attr('hidden', true);
+
+        return $('<div>').append($banner).html();
+    }
+
+    function hideErrorBanner() {
+        $messages.find('.error-banner').remove();
+    }
+
+    function showErrorBanner(message) {
+        hideErrorBanner();
+
+        if (!errorBannerTemplate) {
+            return;
+        }
+
+        var $banner = $(errorBannerTemplate);
+        $banner.find('.error-banner__text').text(message);
+        $banner.removeAttr('hidden');
+        $messages.append($banner);
         scrollToBottom();
-
-        return $msg;
     }
 
     function scrollToBottom() {
-        $messages.scrollTop($messages[0].scrollHeight);
-    }
-
-    function parseSSEResponse(response) {
-        var accumulatedReply = '';
-        var lines = response.split('\n');
-        for (var i = 0; i < lines.length; i++) {
-            var line = lines[i];
-            if (line.indexOf('data:') === 0) {
-                accumulatedReply += line.substring(5); // Remove "data:" prefix
-            }
+        if ($messages.length) {
+            $messages.scrollTop($messages[0].scrollHeight);
         }
-        // Update the response content
-        updateOrAddMessage(accumulatedReply, 'assistant');
-        return accumulatedReply;
     }
 
 })(jQuery);
