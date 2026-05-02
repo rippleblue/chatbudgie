@@ -1005,9 +1005,17 @@ class ChatBudgie {
         );
 
         wp_enqueue_script(
+            'marked-js',
+            'https://cdn.jsdelivr.net/npm/marked/marked.min.js',
+            array(),
+            '12.0.0',
+            true
+        );
+
+        wp_enqueue_script(
             'chatbudgie-script',
             CHATBUDGIE_PLUGIN_URL . 'assets/js/chatbudgie.js',
-            array('jquery'),
+            array('jquery', 'marked-js'),
             CHATBUDGIE_VERSION,
             true
         );
@@ -1154,6 +1162,9 @@ class ChatBudgie {
         curl_setopt($ch, CURLOPT_WRITEFUNCTION, function($ch, $data) {
             // Forward data directly to client
             echo $data;
+            if (ob_get_level()) {
+                ob_flush();
+            }
             flush();
             
             return strlen($data);
@@ -1164,6 +1175,9 @@ class ChatBudgie {
         if (curl_errno($ch)) {
             error_log('ChatBudgie API stream error: ' . curl_error($ch));
             echo "data:{\"error\":\"API stream error: " . addslashes(curl_error($ch)) . "\"}\n\n";
+            if (ob_get_level()) {
+                ob_flush();
+            }
             flush();
         }
         
@@ -1176,15 +1190,16 @@ class ChatBudgie {
      * @return void
      */
     private function sse_set_headers() {
-        if (ob_get_level()) {
+        // Clear all output buffering levels
+        while (ob_get_level()) {
             ob_end_clean();
         }
 
         header('Content-Type: text/event-stream');
         header('Cache-Control: no-cache');
         header('Connection: keep-alive');
-        header('Keep-Alive: timeout=60, max=100');
         header('X-Accel-Buffering: no'); // Disable Nginx buffering
+        header('Content-Encoding: none'); // Disable compression for SSE
 
         // Prevent PHP from timing out
         set_time_limit(0);
@@ -1198,6 +1213,9 @@ class ChatBudgie {
      */
     private function sse_send_event($data) {
         echo "data: " . json_encode($data) . "\n\n";
+        if (ob_get_level()) {
+            ob_flush();
+        }
         flush();
     }
 
@@ -1209,6 +1227,9 @@ class ChatBudgie {
      */
     private function sse_send_event_raw($line) {
         echo $line . "\n";
+        if (ob_get_level()) {
+            ob_flush();
+        }
         flush();
     }
 

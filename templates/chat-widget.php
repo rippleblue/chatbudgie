@@ -84,5 +84,10 @@ $avatar_url = CHATBUDGIE_PLUGIN_URL . '/assets/images/budgie-avatar.png';
             <path d="M22 2 15 22 11 13 2 9 22 2z" />
         </svg>
     </button>
+    <button type="button" class="chat-input__stop" aria-label="Stop response" hidden>
+        <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor" aria-hidden="true">
+            <rect x="7" y="7" width="10" height="10" rx="2" ry="2"></rect>
+        </svg>
+    </button>
 </form>
 </div>
