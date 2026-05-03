@@ -25,19 +25,19 @@
      * Initializes the chat widget components once the DOM is ready.
      */
     $(document).ready(function() {
-        $widget = $('.chatbudgie-widget').first();
+        $widget = $('#chatbudgie-widget').first();
 
         if (!$widget.length) {
             return;
         }
 
-        $toggle = $widget.find('.chatbudgie-toggle');
-        $closeBtn = $widget.find('.chatbudgie-header__close');
-        $messages = $widget.find('.chatbudgie-messages');
-        $form = $widget.find('#chatForm');
-        $input = $widget.find('#chatInputField');
-        $sendBtn = $widget.find('.chatbudgie-input__send');
-        $stopBtn = $widget.find('.chatbudgie-input__stop');
+        $toggle = $('#chatbudgie-toggle');
+        $closeBtn = $('#chatbudgie-close-btn');
+        $messages = $('#chatbudgie-messages');
+        $form = $('#chatbudgie-form');
+        $input = $('#chatbudgie-input-field');
+        $sendBtn = $('#chatbudgie-send-btn');
+        $stopBtn = $('#chatbudgie-stop-btn');
 
         botAvatarHtml = getBotAvatarHtml();
         errorBannerTemplate = getErrorBannerTemplate();

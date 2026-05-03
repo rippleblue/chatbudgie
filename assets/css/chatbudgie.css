@@ -1,5 +1,5 @@
 /* ---------- Widget shell ---------- */
-.chatbudgie-widget {
+#chatbudgie-widget {
     all: revert;
     --chatbudgie-accent: #3f7cf5;
     --chatbudgie-accent-strong: #2f6ee8;
@@ -25,9 +25,9 @@
     font-weight: 400;
 }
 
-.chatbudgie-widget *,
-.chatbudgie-widget *::before,
-.chatbudgie-widget *::after {
+#chatbudgie-widget *,
+#chatbudgie-widget *::before,
+#chatbudgie-widget *::after {
     box-sizing: border-box;
     margin: 0;
     padding: 0;
@@ -39,8 +39,6 @@
     letter-spacing: normal;
     word-spacing: normal;
     text-shadow: none;
-    box-shadow: none;
-    background: none;
     transition: none;
     text-decoration: none;
     list-style: none;
@@ -51,7 +49,7 @@
     min-height: 0;
 }
 
-.chatbudgie-widget.is-open {
+#chatbudgie-widget.is-open {
     background: var(--chatbudgie-surface);
     border: 1px solid rgba(225, 232, 244, 0.9);
     border-radius: 14px;
@@ -62,7 +60,7 @@
     max-height: min(640px, calc(100vh - 24px));
 }
 
-.chatbudgie-toggle {
+#chatbudgie-toggle {
     width: 64px;
     height: 64px;
     border-radius: 50%;
@@ -78,32 +76,32 @@
     transition: transform 0.18s ease, box-shadow 0.18s ease, opacity 0.18s ease;
 }
 
-.chatbudgie-toggle:hover {
+#chatbudgie-toggle:hover {
     transform: translateY(-2px);
     box-shadow:
         0 20px 34px rgba(47, 110, 232, 0.32),
         0 8px 18px rgba(24, 39, 75, 0.18);
 }
 
-.chatbudgie-toggle:active {
+#chatbudgie-toggle:active {
     transform: translateY(0);
 }
 
-.chatbudgie-toggle svg,
-.chatbudgie-toggle img {
+#chatbudgie-toggle svg,
+#chatbudgie-toggle img {
     width: 60px;
     height: 60px;
     border-radius: 50%;
     display: block;
 }
 
-.chatbudgie-widget:not(.is-open) .chatbudgie-header,
-.chatbudgie-widget:not(.is-open) .chatbudgie-messages,
-.chatbudgie-widget:not(.is-open) .chatbudgie-input {
+#chatbudgie-widget:not(.is-open) #chatbudgie-header,
+#chatbudgie-widget:not(.is-open) #chatbudgie-messages,
+#chatbudgie-widget:not(.is-open) #chatbudgie-form {
     display: none;
 }
 
-.chatbudgie-widget.is-open .chatbudgie-toggle {
+#chatbudgie-widget.is-open #chatbudgie-toggle {
     opacity: 0;
     pointer-events: none;
     position: absolute;
@@ -113,7 +111,7 @@
 }
 
 /* ---------- Header ---------- */
-.chatbudgie-header {
+#chatbudgie-header {
     width: 100%;
     background: linear-gradient(180deg, #4a88f5 0%, #3676ef 100%);
     color: #ffffff;
@@ -123,14 +121,14 @@
     justify-content: space-between;
 }
 
-.chatbudgie-header__brand {
+#chatbudgie-header .chatbudgie-header__brand {
     display: flex;
     align-items: center;
     gap: 12px;
     min-width: 0;
 }
 
-.chatbudgie-header__avatar {
+#chatbudgie-header .chatbudgie-header__avatar {
     width: 38px;
     height: 38px;
     border-radius: 50%;
@@ -140,7 +138,7 @@
     justify-content: center;
 }
 
-.chatbudgie-header__title {
+#chatbudgie-header .chatbudgie-header__title {
     margin: 0;
     font-size: 19px;
     font-weight: 700;
@@ -151,7 +149,7 @@
             Arial, sans-serif;
 }
 
-.chatbudgie-header__close {
+#chatbudgie-close-btn {
     width: 36px;
     height: 36px;
     border: none;
@@ -165,16 +163,16 @@
     transition: background 0.16s ease, transform 0.16s ease;
 }
 
-.chatbudgie-header__close:hover {
+#chatbudgie-close-btn:hover {
     background: rgba(255, 255, 255, 0.2);
 }
 
-.chatbudgie-header__close:active {
+#chatbudgie-close-btn:active {
     transform: scale(0.96);
 }
 
 /* ---------- Messages ---------- */
-.chatbudgie-messages {
+#chatbudgie-messages {
     width: 100%;
     height: min(560px, calc(100vh - 196px));
     min-height: 360px;
@@ -189,22 +187,22 @@
         linear-gradient(180deg, #ffffff 0%, #fbfcff 100%);
 }
 
-.chatbudgie-msg {
+#chatbudgie-messages .chatbudgie-msg {
     display: flex;
     align-items: center;
     gap: 10px;
     width: 100%;
 }
 
-.chatbudgie-msg--user {
+#chatbudgie-messages .chatbudgie-msg--user {
     justify-content: flex-end;
 }
 
-.chatbudgie-msg--bot {
+#chatbudgie-messages .chatbudgie-msg--bot {
     justify-content: flex-start;
 }
 
-.chatbudgie-bot-avatar {
+#chatbudgie-messages .chatbudgie-bot-avatar {
     width: 34px;
     height: 34px;
     border-radius: 50%;
@@ -214,7 +212,7 @@
     justify-content: center;
 }
 
-.chatbudgie-bubble {
+#chatbudgie-messages .chatbudgie-bubble {
     max-width: min(78%, 300px);
     padding: 12px 15px;
     border-radius: 18px;
@@ -224,35 +222,35 @@
     word-break: break-word;
 }
 
-.chatbudgie-bubble--user {
+#chatbudgie-messages .chatbudgie-bubble--user {
     background: #eff3fb;
     border-bottom-right-radius: 6px;
 }
 
-.chatbudgie-bubble--bot {
+#chatbudgie-messages .chatbudgie-bubble--bot {
     background: #eaf2ff;
     border-bottom-left-radius: 6px;
 }
 
 /* ---------- Markdown Content ---------- */
-.chatbudgie-bubble--bot > *:first-child { margin-top: 0; }
-.chatbudgie-bubble--bot > *:last-child { margin-bottom: 0; }
+#chatbudgie-messages .chatbudgie-bubble--bot > *:first-child { margin-top: 0; }
+#chatbudgie-messages .chatbudgie-bubble--bot > *:last-child { margin-bottom: 0; }
 
-.chatbudgie-bubble--bot p {
+#chatbudgie-messages .chatbudgie-bubble--bot p {
     margin: 0 0 12px;
 }
 
-.chatbudgie-bubble--bot ul, 
-.chatbudgie-bubble--bot ol {
+#chatbudgie-messages .chatbudgie-bubble--bot ul, 
+#chatbudgie-messages .chatbudgie-bubble--bot ol {
     margin: 0 0 12px 20px;
     padding: 0;
 }
 
-.chatbudgie-bubble--bot li {
+#chatbudgie-messages .chatbudgie-bubble--bot li {
     margin-bottom: 4px;
 }
 
-.chatbudgie-bubble--bot code {
+#chatbudgie-messages .chatbudgie-bubble--bot code {
     background: rgba(0, 0, 0, 0.06);
     padding: 2px 5px;
     border-radius: 4px;
@@ -260,7 +258,7 @@
     font-size: 0.9em;
 }
 
-.chatbudgie-bubble--bot pre {
+#chatbudgie-messages .chatbudgie-bubble--bot pre {
     background: rgba(0, 0, 0, 0.06);
     padding: 12px;
     border-radius: 8px;
@@ -268,7 +266,7 @@
     margin: 12px 0;
 }
 
-.chatbudgie-bubble--bot pre code {
+#chatbudgie-messages .chatbudgie-bubble--bot pre code {
     background: none;
     padding: 0;
     display: block;
@@ -276,31 +274,33 @@
     white-space: pre;
 }
 
-.chatbudgie-bubble--bot h1, .chatbudgie-bubble--bot h2, .chatbudgie-bubble--bot h3 {
+#chatbudgie-messages .chatbudgie-bubble--bot h1, 
+#chatbudgie-messages .chatbudgie-bubble--bot h2, 
+#chatbudgie-messages .chatbudgie-bubble--bot h3 {
     margin: 16px 0 8px;
     font-size: 1.1em;
     font-weight: 600;
 }
 
-.chatbudgie-bubble--bot blockquote {
+#chatbudgie-messages .chatbudgie-bubble--bot blockquote {
     margin: 12px 0;
     padding-left: 12px;
     border-left: 3px solid rgba(0, 0, 0, 0.1);
     color: rgba(0, 0, 0, 0.7);
 }
 
-.chatbudgie-bubble--loading {
+#chatbudgie-messages .chatbudgie-bubble--loading {
     min-width: 72px;
     padding: 14px 16px;
 }
 
-.chatbudgie-typing-indicator {
+#chatbudgie-messages .chatbudgie-typing-indicator {
     display: inline-flex;
     align-items: center;
     gap: 6px;
 }
 
-.chatbudgie-typing-indicator span {
+#chatbudgie-messages .chatbudgie-typing-indicator span {
     width: 7px;
     height: 7px;
     border-radius: 50%;
@@ -308,11 +308,11 @@
     animation: chatbudgie-typing 1.1s infinite ease-in-out;
 }
 
-.chatbudgie-typing-indicator span:nth-child(2) {
+#chatbudgie-messages .chatbudgie-typing-indicator span:nth-child(2) {
     animation-delay: 0.16s;
 }
 
-.chatbudgie-typing-indicator span:nth-child(3) {
+#chatbudgie-messages .chatbudgie-typing-indicator span:nth-child(3) {
     animation-delay: 0.32s;
 }
 
@@ -329,7 +329,7 @@
 }
 
 /* ---------- Error banner ---------- */
-.chatbudgie-error-banner {
+#chatbudgie-error-banner {
     display: flex;
     align-items: center;
     gap: 12px;
@@ -340,11 +340,11 @@
     padding: 14px;
 }
 
-.chatbudgie-error-banner[hidden] {
+#chatbudgie-error-banner[hidden] {
     display: none;
 }
 
-.chatbudgie-error-banner__icon {
+#chatbudgie-error-banner .chatbudgie-error-banner__icon {
     width: 32px;
     flex-shrink: 0;
     display: flex;
@@ -352,26 +352,26 @@
     justify-content: center;
 }
 
-.chatbudgie-error-banner__content {
+#chatbudgie-error-banner .chatbudgie-error-banner__content {
     flex: 1;
     min-width: 0;
 }
 
-.chatbudgie-error-banner__title {
+#chatbudgie-error-banner .chatbudgie-error-banner__title {
     margin: 0 0 4px;
     color: var(--chatbudgie-danger);
     font-size: 14px;
     font-weight: 700;
 }
 
-.chatbudgie-error-banner__text {
+#chatbudgie-error-banner .chatbudgie-error-banner__text {
     margin: 0;
     color: var(--chatbudgie-text);
     font-size: 13px;
     line-height: 1.45;
 }
 
-.chatbudgie-retry-btn {
+#chatbudgie-retry-btn {
     flex-shrink: 0;
     min-width: 82px;
     border: 1px solid rgba(63, 124, 245, 0.14);
@@ -390,18 +390,18 @@
     transition: transform 0.16s ease, box-shadow 0.16s ease, background 0.16s ease;
 }
 
-.chatbudgie-retry-btn:hover {
+#chatbudgie-retry-btn:hover {
     background: #f6f9ff;
     transform: translateY(-1px);
     box-shadow: 0 6px 14px rgba(63, 124, 245, 0.12);
 }
 
-.chatbudgie-retry-btn:active {
+#chatbudgie-retry-btn:active {
     transform: translateY(0);
 }
 
 /* ---------- Input ---------- */
-.chatbudgie-input {
+#chatbudgie-form {
     width: 100%;
     padding: 14px 16px 16px;
     display: flex;
@@ -411,7 +411,7 @@
     border-top: 1px solid var(--chatbudgie-border);
 }
 
-.chatbudgie-input__field {
+#chatbudgie-input-field {
     flex: 1;
     height: 48px;
     border: 1px solid transparent;
@@ -424,23 +424,23 @@
     transition: border-color 0.16s ease, background 0.16s ease, box-shadow 0.16s ease;
 }
 
-.chatbudgie-input__field::placeholder {
+#chatbudgie-input-field::placeholder {
     color: #97a2b6;
 }
 
-.chatbudgie-input__field:focus {
+#chatbudgie-input-field:focus {
     background: #eef4ff;
     border-color: rgba(63, 124, 245, 0.18);
     box-shadow: 0 0 0 3px rgba(63, 124, 245, 0.12);
 }
 
-.chatbudgie-input__field:disabled {
+#chatbudgie-input-field:disabled {
     cursor: not-allowed;
     opacity: 0.75;
 }
 
-.chatbudgie-input__send,
-.chatbudgie-input__stop {
+#chatbudgie-send-btn,
+#chatbudgie-stop-btn {
     width: 46px;
     height: 46px;
     border: none;
@@ -454,83 +454,83 @@
     transition: transform 0.16s ease, background 0.16s ease, opacity 0.16s ease;
 }
 
-.chatbudgie-input__send[hidden],
-.chatbudgie-input__stop[hidden] {
+#chatbudgie-send-btn[hidden],
+#chatbudgie-stop-btn[hidden] {
     display: none !important;
 }
 
-.chatbudgie-input__send:hover,
-.chatbudgie-input__stop:hover {
+#chatbudgie-send-btn:hover,
+#chatbudgie-stop-btn:hover {
     background: #dfebff;
 }
 
-.chatbudgie-input__send:active,
-.chatbudgie-input__stop:active {
+#chatbudgie-send-btn:active,
+#chatbudgie-stop-btn:active {
     transform: scale(0.95);
 }
 
-.chatbudgie-input__send:disabled,
-.chatbudgie-input__stop:disabled {
+#chatbudgie-send-btn:disabled,
+#chatbudgie-stop-btn:disabled {
     cursor: not-allowed;
     opacity: 0.6;
 }
 
-.chatbudgie-input__send svg,
-.chatbudgie-input__stop svg {
+#chatbudgie-send-btn svg,
+#chatbudgie-stop-btn svg {
     display: block;
 }
 
 /* ---------- Scrollbar ---------- */
-.chatbudgie-messages::-webkit-scrollbar {
+#chatbudgie-messages::-webkit-scrollbar {
     width: 6px;
 }
 
-.chatbudgie-messages::-webkit-scrollbar-thumb {
+#chatbudgie-messages::-webkit-scrollbar-thumb {
     background: #d6dceb;
     border-radius: 999px;
 }
 
-.chatbudgie-messages::-webkit-scrollbar-track {
+#chatbudgie-messages::-webkit-scrollbar-track {
     background: transparent;
 }
 
 /* ---------- Responsive ---------- */
 @media (max-width: 640px) {
-    .chatbudgie-widget {
+    #chatbudgie-widget {
         right: 12px;
         bottom: 12px;
         width: calc(100vw - 24px);
         max-height: calc(100vh - 24px);
     }
 
-    .chatbudgie-widget.is-open {
+    #chatbudgie-widget.is-open {
         max-height: calc(100vh - 24px);
     }
 
-    .chatbudgie-messages {
+    #chatbudgie-messages {
         height: calc(100vh - 204px);
         min-height: 300px;
     }
 }
 
 @media (max-height: 640px) {
-    .chatbudgie-widget {
+    #chatbudgie-widget {
         right: 10px;
         bottom: 10px;
         width: min(420px, calc(100vw - 20px));
         max-height: calc(100vh - 20px);
     }
 
-    .chatbudgie-widget.is-open {
+    #chatbudgie-widget.is-open {
         border-radius: 20px;
         max-height: calc(100vh - 20px);
     }
 
-    .chatbudgie-header {
+    #chatbudgie-header {
         padding: 14px 14px 12px;
     }
 
-    .chatbudgie-messages {
+    #chatbudgie-messages {
         height: calc(100vh - 164px);
         min-height: 180px;
         max-height: calc(100vh - 164px);
@@ -538,16 +538,16 @@
         gap: 12px;
     }
 
-    .chatbudgie-input {
+    #chatbudgie-form {
         padding: 10px 14px 14px;
     }
 
-    .chatbudgie-input__field,
-    .chatbudgie-input__send {
+    #chatbudgie-input-field,
+    #chatbudgie-send-btn {
         height: 42px;
     }
-.chatbudgie-input__send {
-    width: 42px;
-}
-}
 
+    #chatbudgie-send-btn {
+        width: 42px;
+    }
+}

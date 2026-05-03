@@ -1057,22 +1057,6 @@ class ChatBudgie {
     }
 
     /**
-     * Render SVG or custom icon based on icon type and context
-     * Outputs inline SVG or img tag for chat widget icons
-     * 
-     * @param string $icon_type The type of icon to render (default, robot, headphones, message, budgie, custom)
-     * @param string $custom_icon URL of custom icon (used when icon_type is 'custom')
-     * @param string $context Display context ('toggle' for widget button, 'header' for chat header)
-     * @return void
-     */
-    private function render_icon($icon_type, $custom_icon, $context = 'toggle') {
-        $size = $context === 'header' ? 20 : 24;
-        $stroke_width = $context === 'header' ? 1.5 : 2;
-
-        include CHATBUDGIE_PLUGIN_DIR . 'templates/icons.php';
-    }
-
-    /**
      * Render the chat widget HTML markup
      * Outputs the chat bubble toggle, container, header, message area, and input form
      * 
@@ -1169,6 +1153,15 @@ class ChatBudgie {
         
         // Enable streaming
         curl_setopt($ch, CURLOPT_WRITEFUNCTION, function($ch, $data) {
+            // Check the response status code before forwarding data
+            $http_code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+            if ($http_code !== 200) {
+                http_response_code($http_code);
+                error_log('API stream error: Received HTTP code from upstream ' . $http_code);
+                error_log($data);
+                return 0;
+            }
+
             // Forward data directly to client
             echo $data;
             if (ob_get_level()) {
@@ -1180,25 +1173,27 @@ class ChatBudgie {
         });
         
         $response = curl_exec($ch);
-        
-        if (curl_errno($ch)) {
-            $error_message = 'API stream error: ' . curl_error($ch);
-            error_log('ChatBudgie ' . $error_message);
-            curl_close($ch);
-            throw new Exception($error_message, 502);
-        }
-        
+
         $http_code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
         if ($http_code !== 200) {
-            $error_message = 'API stream error: Received HTTP code ' . $http_code;
+            $error_message = 'API response error: ' . $http_code;
             if ($http_code === 401) {
-                $error_message .= ' - Please login ChatBudgie account in the setting page';
+                $error_message .= ' - You are not allowed to access the API. Please login ChatBudgie account in the settings page.';
+            } elseif ($http_code === 402) {
+                $error_message .= ' - Your token has been used up. Please go to ChatBudgie settings page to recharge.';
             }
-            error_log('ChatBudgie ' . $error_message);
+            error_log($error_message);
             curl_close($ch);
             throw new Exception($error_message, $http_code);
         }
         
+        if (curl_errno($ch)) {
+            $error_message = 'API stream error: ' . curl_error($ch);
+            error_log($error_message);
+            curl_close($ch);
+            throw new Exception($error_message, 502);
+        }
+
         curl_close($ch);
     }
 
@@ -1224,34 +1219,6 @@ class ChatBudgie {
     }
 
     /**
-     * Send an SSE event to the client
-     *
-     * @param array $data The data to send
-     * @return void
-     */
-    private function sse_send_event($data) {
-        echo "data: " . json_encode($data) . "\n\n";
-        if (ob_get_level()) {
-            ob_flush();
-        }
-        flush();
-    }
-
-    /**
-     * Forward raw SSE data line to the client
-     *
-     * @param string $line The raw SSE data line (e.g., "data:The weather")
-     * @return void
-     */
-    private function sse_send_event_raw($line) {
-        echo $line . "\n";
-        if (ob_get_level()) {
-            ob_flush();
-        }
-        flush();
-    }
-
-    /**
      * Send an SSE error event and set an HTTP error status when possible
      *
      * @param string $message The error message to send
@@ -1266,7 +1233,7 @@ class ChatBudgie {
         if (!$message) {
             $message = 'An unknown error occurred';
         }
-        echo 'error:' . $message . "\n\n";
+        echo $message . "\n\n";
         if (ob_get_level()) {
             ob_flush();
         }
