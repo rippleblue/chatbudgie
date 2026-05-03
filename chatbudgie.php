@@ -1079,7 +1079,7 @@ class ChatBudgie {
      * @return void
      */
     public function render_chat_widget() {
-        include CHATBUDGIE_PLUGIN_DIR . 'templates/chat-widget.php';
+        include CHATBUDGIE_PLUGIN_DIR . 'templates/chatbudgie-widget.php';
     }
 
     /**

@@ -25,19 +25,19 @@
      * Initializes the chat widget components once the DOM is ready.
      */
     $(document).ready(function() {
-        $widget = $('.chat-widget').first();
+        $widget = $('.chatbudgie-widget').first();
 
         if (!$widget.length) {
             return;
         }
 
         $toggle = $widget.find('.chatbudgie-toggle');
-        $closeBtn = $widget.find('.chat-header__close');
-        $messages = $widget.find('.chat-messages');
+        $closeBtn = $widget.find('.chatbudgie-header__close');
+        $messages = $widget.find('.chatbudgie-messages');
         $form = $widget.find('#chatForm');
         $input = $widget.find('#chatInputField');
-        $sendBtn = $widget.find('.chat-input__send');
-        $stopBtn = $widget.find('.chat-input__stop');
+        $sendBtn = $widget.find('.chatbudgie-input__send');
+        $stopBtn = $widget.find('.chatbudgie-input__stop');
 
         botAvatarHtml = getBotAvatarHtml();
         errorBannerTemplate = getErrorBannerTemplate();
@@ -146,7 +146,7 @@
 
         $stopBtn.on('click', stopCurrentResponse);
 
-        $messages.on('click', '.retry-btn', function() {
+        $messages.on('click', '.chatbudgie-retry-btn', function() {
             if (!lastFailedMessage || isSending) {
                 return;
             }
@@ -185,7 +185,7 @@
             return;
         }
 
-        if ($(event.target).closest('.chat-widget').length) {
+        if ($(event.target).closest('.chatbudgie-widget').length) {
             return;
         }
 
@@ -449,8 +449,8 @@
      * @returns {jQuery} The created message element.
      */
     function addUserMessage(content, skipScroll) {
-        var $message = $('<div class="msg msg--user"></div>');
-        var $bubble = $('<div class="bubble bubble--user"></div>').text(content);
+        var $message = $('<div class="chatbudgie-msg chatbudgie-msg--user"></div>');
+        var $bubble = $('<div class="chatbudgie-bubble chatbudgie-bubble--user"></div>').text(content);
 
         $message.append($bubble);
         $messages.append($message);
@@ -470,9 +470,9 @@
      * @returns {jQuery} The created message element.
      */
     function addBotMessage(content, skipScroll) {
-        var $message = $('<div class="msg msg--bot"></div>');
+        var $message = $('<div class="chatbudgie-msg chatbudgie-msg--bot"></div>');
         var $avatar = $(botAvatarHtml);
-        var $bubble = $('<div class="bubble bubble--bot"></div>');
+        var $bubble = $('<div class="chatbudgie-bubble chatbudgie-bubble--bot"></div>');
 
         if (window.marked && typeof marked.parse === 'function') {
             $bubble.html(marked.parse(content));
@@ -496,10 +496,10 @@
      * @returns {jQuery} The created message element.
      */
     function addLoadingMessage() {
-        var $message = $('<div class="msg msg--bot"></div>');
+        var $message = $('<div class="chatbudgie-msg chatbudgie-msg--bot"></div>');
         var $avatar = $(botAvatarHtml);
-        var $bubble = $('<div class="bubble bubble--bot bubble--loading"></div>');
-        var $indicator = $('<div class="typing-indicator"><span></span><span></span><span></span></div>');
+        var $bubble = $('<div class="chatbudgie-bubble chatbudgie-bubble--bot chatbudgie-bubble--loading"></div>');
+        var $indicator = $('<div class="chatbudgie-typing-indicator"><span></span><span></span><span></span></div>');
 
         $bubble.append($indicator);
         $message.append($avatar, $bubble);
@@ -520,8 +520,8 @@
             return;
         }
 
-        var $bubble = $message.find('.bubble');
-        $bubble.removeClass('bubble--loading');
+        var $bubble = $message.find('.chatbudgie-bubble');
+        $bubble.removeClass('chatbudgie-bubble--loading');
         
         if (window.marked && typeof marked.parse === 'function') {
             $bubble.html(marked.parse(content));
@@ -538,10 +538,10 @@
      * @returns {string} The HTML string of the bot avatar.
      */
     function getBotAvatarHtml() {
-        var $avatar = $widget.find('.bot-avatar').first().clone();
+        var $avatar = $widget.find('.chatbudgie-bot-avatar').first().clone();
 
         if (!$avatar.length) {
-            return '<div class="bot-avatar" aria-hidden="true"></div>';
+            return '<div class="chatbudgie-bot-avatar" aria-hidden="true"></div>';
         }
 
         return $('<div>').append($avatar).html();
@@ -553,7 +553,7 @@
      * @returns {string} The HTML string of the error banner.
      */
     function getErrorBannerTemplate() {
-        var $banner = $widget.find('.error-banner').first().clone();
+        var $banner = $widget.find('.chatbudgie-error-banner').first().clone();
 
         if (!$banner.length) {
             return '';
@@ -568,7 +568,7 @@
      * Removes any existing error banners from the chat window.
      */
     function hideErrorBanner() {
-        $messages.find('.error-banner').remove();
+        $messages.find('.chatbudgie-error-banner').remove();
     }
 
     /**
@@ -584,7 +584,7 @@
         }
 
         var $banner = $(errorBannerTemplate);
-        $banner.find('.error-banner__text').text(message);
+        $banner.find('.chatbudgie-error-banner__text').text(message);
         $banner.removeAttr('hidden');
         $messages.append($banner);
         scrollToBottom();
