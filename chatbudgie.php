@@ -41,8 +41,8 @@ define('CHATBUDGIE_APP_NAME', 'chatbudgie');
 define('CHATBUDGIE_PAYPAL_CLIENT_ID', 'AekooxzVQrv7o8r58pnHigf0owNuUr0i8rXBQemNt1ADaCom1v-63rNhrxy48zYhNQBKbqttnm1yUpTE');
 define('CHATBUDGIE_PLUGIN_DIR', plugin_dir_path(__FILE__));
 define('CHATBUDGIE_PLUGIN_URL', plugin_dir_url(__FILE__));
-//define('CHATBUDGIE_BASE_URL', 'https://chat.superbudgie.com/');
-define('CHATBUDGIE_BASE_URL', 'https://docker.internal:8443/');
+define('CHATBUDGIE_BASE_URL', 'https://chat.superbudgie.com/');
+//define('CHATBUDGIE_BASE_URL', 'https://docker.internal:8443/');
 //define('CHATBUDGIE_BASE_URL', 'https://localhost:8443/');
 
 use ChatBudgie\Vektor\Core\Config;
@@ -62,7 +62,6 @@ class ChatBudgie {
     public const CREATE_PAYPAL_ORDER_API = CHATBUDGIE_BASE_URL . 'api/payment/paypal/create';
     public const CAPTURE_PAYPAL_ORDER_API = CHATBUDGIE_BASE_URL . 'api/payment/paypal/capture';
     public const SSL_VERIFY = false;
-    public const PAYPAL_CLIENT_ID = 'AekooxzVQrv7o8r58pnHigf0owNuUr0i8rXBQemNt1ADaCom1v-63rNhrxy48zYhNQBKbqttnm1yUpTE';
     public const INDEX_META_TABLE = 'chatbudgie_index_meta';
     public const CHUNK_TABLE = 'chatbudgie_chunk_data';
 
