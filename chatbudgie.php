@@ -1212,7 +1212,7 @@ class ChatBudgie {
             'nonce' => wp_create_nonce('chatbudgie_nonce'),
             'strings' => array(
                 'placeholder' => __('Please enter your question...', 'chatbudgie'),
-                'welcome' => get_option('chatbudgie_welcome_message', __("I'm ChatBudgie, assistant of the website. How can I help you today?", 'chatbudgie')),
+                'welcome' => get_option('chatbudgie_welcome_message', __("Hi, I'm ChatBudgie, assistant of the website. If this is the first time you open ChatBudgie, please ensure you have connected to ChatBudgie account in the settings page.", 'chatbudgie')),
                 'sending' => __('Sending...', 'chatbudgie'),
                 'error' => __('Failed to send, please try again', 'chatbudgie'),
                 'api_error' => __('API call failed', 'chatbudgie')
